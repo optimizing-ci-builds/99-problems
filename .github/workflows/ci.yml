@@ -35,6 +35,7 @@ jobs:
           java-version: ${{ matrix.java }}
       - run: touch starting_test_TestwithMaven_23
       - name: Test with Maven
+        run: mvn test -B --file java8/pom.xml
       - uses: jannekem/run-python-script-action@v1
         with:
           script: |
@@ -95,6 +96,6 @@ jobs:
           destination-github-username: 'optimizing-ci-builds'
           destination-repository-name: 'ci-analyzes'
           target-directory: '99-problems/.github/workflows/ci/test'
-        run: mvn test -B --file java8/pom.xml
+        
 
 ...
