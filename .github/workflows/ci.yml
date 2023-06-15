@@ -15,12 +15,69 @@ jobs:
     name: Test JDK ${{ matrix.java }}, ${{ matrix.os }}
 
     steps:
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas
+          pip install numpy
+      - run: sudo apt update
+      - run: sudo apt install inotify-tools
+      - run: inotifywait -mr /home/runner/work/99-problems/99-problems/ --format '%T;%w;%f;%e' --timefmt %T -o /home/runner/inotify-logs.csv & echo 'optimizing-ci-builds'
+      - run: touch starting_test_uses-checkout_18
+      - run: rm starting_test_uses-checkout_18
       - uses: actions/checkout@v1
+      - run: touch starting_test_SetupJDK_19
+      - run: rm starting_test_SetupJDK_19
       - name: Set up JDK
         uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
+      - run: touch starting_test_TestwithMaven_23
+      - run: rm starting_test_TestwithMaven_23
       - name: Test with Maven
         run: mvn test -B --file java8/pom.xml
-
+      - run: touch starting_finished_finished_8979874
+        if: always()
+      - run: rm starting_finished_finished_8979874
+        if: always()
+      - name: rat check
+        if: always()
+        run: |
+           if [ -f /home/runner/work/99-problems/99-problems/target/rat.txt ]; then cat /home/runner/work/99-problems/99-problems/target/rat.txt; fi
+      - name: Check script file exists and execute
+        if: always()
+        run: |
+          [ -f .github/workflows/script.py ] && python .github/workflows/script.py
+          [ -f /home/runner/work/99-problems/99-problems/optimizing-ci-builds-ci-analysis/job.csv ] || mkdir -p /home/runner/work/99-problems/99-problems/optimizing-ci-builds-ci-analysis/; echo "${GITHUB_RUN_ID},${GITHUB_JOB},99-problems,${GITHUB_WORKFLOW}" > /home/runner/work/99-problems/99-problems/optimizing-ci-builds-ci-analysis/job.csv
+      - name: Checkout to destination CI-analyzes repo
+        uses: actions/checkout@v3
+        if: always()
+        with:
+          path: 99-problems
+          ref: '1686856134-548a464'
+          repository: 'UT-SE-Research/ci-analyzes'
+          token: '${{ secrets.API_TOKEN_GITHUB }}'
+          persist-credentials: true
+      - name: Copy files to push to another directory
+        if: always()
+        run: |
+          mkdir -p 99-problems/99-problems/.github/workflows/ci/test_os_${{ matrix.os }}_java_${{ matrix.java }}
+          cp -rvT optimizing-ci-builds-ci-analysis 99-problems/99-problems/.github/workflows/ci/test_os_${{ matrix.os }}_java_${{ matrix.java }}
+      - run: echo https://github.com/UT-SE-Research/ci-analyzes/tree/1686856134-548a464/99-problems/.github/workflows/ci/test_os_${{ matrix.os }}_java_${{ matrix.java }}
+      - name: Pushes analysis to another repository
+        if: always()
+        working-directory: 99-problems
+        run: |
+          commit_message=$GITHUB_REPOSITORY@$GITHUB_WORKFLOW_SHA
+          git config --global user.name 'UT-SE-Research'
+          git config --global user.email '${{ secrets.EMAIL }}'
+          git add .
+          git commit -m $commit_message
+          while ! git push origin 1686856134-548a464; do
+            git pull --rebase origin 1686856134-548a464
+            sleep $((RANDOM % 5 + 1))
+          done
 ...
